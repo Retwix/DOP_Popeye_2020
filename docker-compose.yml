@@ -1,0 +1,64 @@
+version: "3"
+
+services:
+
+  redis:
+    image: redis:alpine
+    restart: on-failure
+    environment: 
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6379:6379"
+    networks:
+      - poll-tier
+      - back-tier
+
+  db:
+    image: postgres:alpine
+    restart: on-failure
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      # - POSTGRES_PASSWORD:'password'
+    volumes: 
+      - db-data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks: 
+      - result-tier
+      - back-tier
+    
+
+  poll:
+    build: './poll'
+    restart: on-failure
+    environment:
+      FLASK_DEV: developement
+    ports: 
+      - "5000:80"
+    networks: 
+      - poll-tier
+    
+  result:
+    build: './result'
+    restart: on-failure
+    environment:
+      NODE_DEV: developement
+    ports:
+      - "5001:80"
+    networks:
+      - result-tier
+    
+  worker:
+    build: './worker'
+    restart: on-failure
+    environment: 
+      JAVA_DEV: developement
+    networks: 
+      - back-tier
+
+volumes:
+  db-data:
+
+networks:
+  poll-tier:
+  result-tier:
+  back-tier:
